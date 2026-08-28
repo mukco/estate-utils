@@ -1,0 +1,12 @@
+Gemfile.lock
+*.gem
+coverage/
+
+# Environment files, every variant. `.env` alone did not cover
+# `.env.production` / `.env.development`, which is the convention the estate
+# actually uses.
+.env
+.env.*
+!.env.example
+
+tmp/
