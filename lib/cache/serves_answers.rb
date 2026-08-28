@@ -37,9 +37,19 @@ module Cache
     LIVE_CACHE_CONTROL   = "public, max-age=10, stale-while-revalidate=60"
     STABLE_CACHE_CONTROL = "public, max-age=60, stale-while-revalidate=600"
 
-    # Which `kind` prefixes count as live. An app with its own live kinds
-    # overrides this constant, or passes `live:` at the call site.
+    # Which `kind` prefixes count as live.
+    #
+    # Override the METHOD, not the constant. Ruby resolves a constant lexically,
+    # so `LIVE_KINDS` inside this module always means this module's — a
+    # controller that defines its own is never consulted, and the difference is
+    # silent: the wrong Cache-Control, no error. Football's list is genuinely
+    # longer than baseball's, so this had to be overridable to be correct.
+    #
+    #   def live_kinds = super + %w[fantasy_insights: team_factoids:]
     LIVE_KINDS = %w[game_insights: picks:].freeze
+
+    # Overridable per app. See LIVE_KINDS.
+    def live_kinds = LIVE_KINDS
 
     private
 
@@ -61,7 +71,7 @@ module Cache
                       status: :accepted
       end
 
-      live = kind.to_s.start_with?(*LIVE_KINDS) if live.nil?
+      live = kind.to_s.start_with?(*live_kinds) if live.nil?
       response.headers["Cache-Control"] = live ? LIVE_CACHE_CONTROL : STABLE_CACHE_CONTROL
 
       # Only a generation reads as fresh: a re-leased answer is the same words
