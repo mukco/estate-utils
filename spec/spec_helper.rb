@@ -4,7 +4,7 @@ require "active_support"
 require "active_support/cache"
 require "active_support/core_ext/numeric/time"
 
-require "cache"
+require "estate/cache"
 
 RSpec.configure do |config|
   config.expect_with(:rspec) { |c| c.syntax = :expect }
@@ -15,8 +15,8 @@ RSpec.configure do |config|
   # clean slate and the standing proof that the gem does not reach for
   # Rails.cache when it has been handed one.
   config.before do
-    Cache.reset!
-    Cache::Warehouse.reset!
-    Cache.store = ActiveSupport::Cache::MemoryStore.new
+    Estate::Cache.reset!
+    Estate::Cache::Warehouse.reset!
+    Estate::Cache.store = ActiveSupport::Cache::MemoryStore.new
   end
 end

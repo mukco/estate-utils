@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-# New. Cache::Warehouse is the build-stamped path, separated out from the
+# New. Estate::Cache::Warehouse is the build-stamped path, separated out from the
 # TTL path everybody was actually using — so it needs examples of its own,
 # there being none to carry over.
-RSpec.describe Cache::Warehouse do
+RSpec.describe Estate::Cache::Warehouse do
   let(:build) { "100" }
 
   before { described_class.stamp_provider = -> { build } }
@@ -46,7 +46,7 @@ RSpec.describe Cache::Warehouse do
   it "writes where Answers can read it, under the same stamp" do
     described_class.write("movers", { rows: [1] })
 
-    expect(Cache::Answers.read("movers", stamp: build)).to include(fresh: true)
+    expect(Estate::Cache::Answers.read("movers", stamp: build)).to include(fresh: true)
   end
 
   # An unset provider must not silently fall back to something plausible: a
@@ -56,6 +56,6 @@ RSpec.describe Cache::Warehouse do
     described_class.reset!
 
     expect { described_class.read("movers") }
-      .to raise_error(Cache::NotConfigured, /stamp_provider/)
+      .to raise_error(Estate::Cache::NotConfigured, /stamp_provider/)
   end
 end

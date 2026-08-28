@@ -7,11 +7,11 @@ written from the actual call sites rather than from memory.
 
 | Was | Is |
 | --- | --- |
-| `Warehouse::Cached` | `Cache::Answers` |
-| `Warehouse::Cached::BY_TTL` | `Cache::Answers::BY_TTL` — and the default, so mostly deleted |
-| `Warehouse::AnswerLog` | `Cache::AnswerLog` |
-| `Api::ServesCachedAnswers` | `Cache::ServesAnswers` |
-| — (new) | `Cache::Warehouse`, the build-stamped variant |
+| `Warehouse::Cached` | `Estate::Cache::Answers` |
+| `Warehouse::Cached::BY_TTL` | `Estate::Cache::Answers::BY_TTL` — and the default, so mostly deleted |
+| `Warehouse::AnswerLog` | `Estate::Cache::AnswerLog` |
+| `Api::ServesCachedAnswers` | `Estate::Cache::ServesAnswers` |
+| — (new) | `Estate::Cache::Warehouse`, the build-stamped variant |
 
 The rename is the point, not incidental. `Warehouse::Cached` caches thirteen
 things in baseball and exactly one of them is warehouse data — the rest are
@@ -35,10 +35,10 @@ The two services that genuinely track the warehouse —
 pass `Warehouse::Manager.build_stamp` as a **fingerprint**, with `stamp:
 BY_TTL`. That is a different argument and it keeps working unchanged; they may
 just drop the now-redundant `stamp:` line. If either is ever meant to key on the
-build rather than re-lease against it, `Cache::Warehouse` is what it wants.
+build rather than re-lease against it, `Estate::Cache::Warehouse` is what it wants.
 
 **2. `ServesCachedAnswers` named `RefreshCachedInsightJob` directly.** It is
-now `Cache.refresh_job`, set once in an initializer. Unset, it warns on every
+now `Estate::Cache.refresh_job`, set once in an initializer. Unset, it warns on every
 call rather than raising (a request that could still serve the last good answer
 must not 500) and rather than going quiet (an app whose answers silently never
 refresh is the failure that hides for weeks).
@@ -54,9 +54,9 @@ gem "estate-utils", git: "https://github.com/mukco/estate-utils.git", branch: "m
 **`config/initializers/cache.rb`** (new):
 
 ```ruby
-Cache.refresh_job = RefreshCachedInsightJob
+Estate::Cache.refresh_job = RefreshCachedInsightJob
 # Only if something adopts the stamped path; nothing does today.
-# Cache::Warehouse.stamp_provider = -> { Warehouse::Manager.build_stamp }
+# Estate::Cache::Warehouse.stamp_provider = -> { Warehouse::Manager.build_stamp }
 ```
 
 **Delete** (all four now live in the gem):
@@ -66,7 +66,7 @@ Cache.refresh_job = RefreshCachedInsightJob
 - `app/controllers/concerns/api/serves_cached_answers.rb`
 - `spec/services/warehouse/cached_spec.rb`, `spec/services/warehouse/answer_log_spec.rb`
 
-**Rename** `Warehouse::Cached` → `Cache::Answers` in 13 services and 1 job:
+**Rename** `Warehouse::Cached` → `Estate::Cache::Answers` in 13 services and 1 job:
 
 ```
 app/services/daily_summary_service.rb          app/services/ottoneu_insights_service.rb
@@ -86,15 +86,15 @@ plus `spec/services/game_insights_live_fingerprint_spec.rb` and
 In the same pass, every `stamp: Warehouse::Cached::BY_TTL` can be deleted — it
 is the default. That is 13 `read` call sites and 9 `resolve` ones.
 
-**`Warehouse::AnswerLog` → `Cache::AnswerLog`** in
+**`Warehouse::AnswerLog` → `Estate::Cache::AnswerLog`** in
 `app/controllers/api/cache_warming_controller.rb` (the only user).
 
-**`include Api::ServesCachedAnswers` → `include Cache::ServesAnswers`** in five
+**`include Api::ServesCachedAnswers` → `include Estate::Cache::ServesAnswers`** in five
 controllers: `teams`, `prospects`, `ottoneu`, `daily_summary`, `games`. The
 `serve_cached` signature is unchanged, so no call site moves. Baseball's
 hardcoded live-kind test (`game_insights:`, `picks:`) is the gem's default, so
 the behaviour is identical; a new live kind is now added to
-`Cache::ServesAnswers::LIVE_KINDS` or passed as `live:` at the call site.
+`Estate::Cache::ServesAnswers::LIVE_KINDS` or passed as `live:` at the call site.
 
 The prose comments in eight service files that say "See Api::ServesCachedAnswers"
 need the new name, or they become a dangling reference.
@@ -107,10 +107,10 @@ has no callers outside the gem at all.
 - Gemfile line, initializer: identical to baseball's.
 - Delete: `app/services/warehouse/cached.rb`, `app/services/warehouse/answer_log.rb`,
   `app/controllers/concerns/api/serves_cached_answers.rb`.
-- Rename `Warehouse::Cached` → `Cache::Answers` in four services:
+- Rename `Warehouse::Cached` → `Estate::Cache::Answers` in four services:
   `factoid_service.rb`, `daily_summary_service.rb`, `picks_service.rb`,
   `game_insights_service.rb`.
-- `include Cache::ServesAnswers` in two controllers: `games`, `daily_summary`.
+- `include Estate::Cache::ServesAnswers` in two controllers: `games`, `daily_summary`.
 
 Football has no specs for either module today, so there are none to delete —
 the gem's carried-over ones are the first coverage this code has had in that
@@ -145,11 +145,11 @@ asked for and it is what is built. It is worth one more look, because it breaks
 the estate's only precedent — `estate-monitor` provides `Estate::Monitor` — and
 because a bare top-level `Cache` is a broad constant to claim in a Rails app
 that also has `ActiveSupport::Cache` and, in baseball, a
-`CacheWarmingController` and a `CacheWarmingService`. `Estate::Utils::Cache::Answers`
+`CacheWarmingController` and a `CacheWarmingService`. `Estate::Utils::Estate::Cache::Answers`
 is uglier and safer. Either works; the files are laid out so the change is a
 `git mv` of `lib/cache*` and one `module` line per file.
 
-**`Cache::Answers.current?` has no callers.** Its comment says "used by the warm
+**`Estate::Cache::Answers.current?` has no callers.** Its comment says "used by the warm
 jobs"; it is used by nothing in either app but its own spec. It is carried over
 because the extraction should not quietly change behaviour, but it is a
 candidate for deletion once somebody confirms it is not wanted.

@@ -2,7 +2,7 @@
 
 # Carried over from baseball's spec/services/warehouse/answer_log_spec.rb.
 # Unchanged except for the constant name and the store being handed in.
-RSpec.describe Cache::AnswerLog do
+RSpec.describe Estate::Cache::AnswerLog do
   it "counts each outcome separately" do
     described_class.record("a", outcome: :generated, duration_ms: 900)
     described_class.record("a", outcome: :kept)
@@ -45,13 +45,13 @@ RSpec.describe Cache::AnswerLog do
 
   # Instrumentation must never be the thing that breaks the pipeline.
   it "swallows a broken cache rather than raising into the caller" do
-    allow(Cache.store).to receive(:write).and_raise(StandardError, "down")
+    allow(Estate::Cache.store).to receive(:write).and_raise(StandardError, "down")
 
     expect { described_class.record("a", outcome: :generated) }.not_to raise_error
   end
 
   it "reads as empty rather than raising when the store cannot be read" do
-    allow(Cache.store).to receive(:read).and_raise(StandardError, "down")
+    allow(Estate::Cache.store).to receive(:read).and_raise(StandardError, "down")
 
     expect(described_class.all).to eq({})
   end

@@ -32,15 +32,15 @@ waits for a generation on the request path.
 ## Usage
 
 ```ruby
-Cache.refresh_job = RefreshCachedInsightJob   # in an initializer
+Estate::Cache.refresh_job = RefreshCachedInsightJob   # in an initializer
 
 # In a service
-Cache::Answers.resolve("game_insights:#{id}", ttl: 10.minutes,
+Estate::Cache::Answers.resolve("game_insights:#{id}", ttl: 10.minutes,
                        fingerprint: state_fingerprint(id)) { generate(id) }
 
 # In a controller
-include Cache::ServesAnswers
-serve_cached(Cache::Answers.read("game_insights:#{id}"),
+include Estate::Cache::ServesAnswers
+serve_cached(Estate::Cache::Answers.read("game_insights:#{id}"),
              kind: "game_insights:#{id}", refresh: params[:refresh].present?)
 ```
 
@@ -48,22 +48,22 @@ serve_cached(Cache::Answers.read("game_insights:#{id}"),
 `:served`, `:kept`, `:generated`, `:failed` — a Cached/Fresh badge renders off
 it, and only `:generated` is honestly fresh.
 
-## Cache::Warehouse
+## Estate::Cache::Warehouse
 
 The build-stamped variant: the stamp goes into the key, so a rebuild
 invalidates the answer and the value can be held for hours without ever being
 stale.
 
 ```ruby
-Cache::Warehouse.stamp_provider = -> { Warehouse::Manager.build_stamp }
-Cache::Warehouse.resolve("depth_movers", ttl: 6.hours) { generate }
+Estate::Cache::Warehouse.stamp_provider = -> { Warehouse::Manager.build_stamp }
+Estate::Cache::Warehouse.resolve("depth_movers", ttl: 6.hours) { generate }
 ```
 
 Nobody uses it yet. It is separated out because it is the mechanism
 `Warehouse::Cached` was *named* for, while everything actually using that module
 was caching model answers against a TTL — see MIGRATION.md.
 
-## Cache::AnswerLog
+## Estate::Cache::AnswerLog
 
 What the cache did, per answer name: generated / kept / served / failed counts,
 the last error, the last duration.
@@ -77,10 +77,10 @@ bill. This is its only symptom.
 
 | | Default | |
 | --- | --- | --- |
-| `Cache.store` | `Rails.cache` | read through, not memoised, so swapping `Rails.cache` works |
-| `Cache.logger` | `Rails.logger` | |
-| `Cache.refresh_job` | warns | must respond to `enqueue_once(kind)` |
-| `Cache::Warehouse.stamp_provider` | raises | only needed if you use `Cache::Warehouse` |
+| `Estate::Cache.store` | `Rails.cache` | read through, not memoised, so swapping `Rails.cache` works |
+| `Estate::Cache.logger` | `Rails.logger` | |
+| `Estate::Cache.refresh_job` | warns | must respond to `enqueue_once(kind)` |
+| `Estate::Cache::Warehouse.stamp_provider` | raises | only needed if you use `Estate::Cache::Warehouse` |
 
 The specs run with no Rails at all, which is the standing proof that these are
 real seams rather than decoration.

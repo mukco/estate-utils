@@ -7,10 +7,10 @@ require "spec_helper"
 # resolved lexically inside the module: a controller defining its own would
 # never have been consulted, and nothing would have said so. The symptom is a
 # 60-second Cache-Control where a 10-second one was meant, on live game data.
-RSpec.describe Cache::ServesAnswers do
+RSpec.describe Estate::Cache::ServesAnswers do
   let(:controller_class) do
     Class.new do
-      include Cache::ServesAnswers
+      include Estate::Cache::ServesAnswers
       public :live_kinds
       def self.name = "BaselineController"
     end
@@ -18,7 +18,7 @@ RSpec.describe Cache::ServesAnswers do
 
   let(:overriding_class) do
     Class.new do
-      include Cache::ServesAnswers
+      include Estate::Cache::ServesAnswers
       public :live_kinds
       def live_kinds = super + %w[fantasy_insights: team_factoids:]
       def self.name = "FootballController"
@@ -45,7 +45,7 @@ RSpec.describe Cache::ServesAnswers do
   # The trap this replaced: a constant redefined in the including class.
   it "ignores a redefined constant, which is why the seam is a method" do
     with_constant = Class.new do
-      include Cache::ServesAnswers
+      include Estate::Cache::ServesAnswers
       public :live_kinds
       const_set(:LIVE_KINDS, %w[nope:].freeze)
       def self.name = "ConstantController"

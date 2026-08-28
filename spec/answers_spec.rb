@@ -6,7 +6,7 @@
 # BY_TTL now instead of the warehouse build, so the examples that exercised
 # version movement say which version they mean rather than stubbing a Manager
 # the gem no longer knows about. And there is no Rails: the store is handed in.
-RSpec.describe Cache::Answers do
+RSpec.describe Estate::Cache::Answers do
   let(:build) { "100" }
 
   it "reads back what it wrote, as fresh" do
@@ -169,7 +169,7 @@ RSpec.describe Cache::Answers do
     it "counts a nil generation as a failure" do
       described_class.resolve("thing", ttl: 1.hour) { nil }
 
-      expect(Cache::AnswerLog.all["thing"]).to include("failed_count" => 1)
+      expect(Estate::Cache::AnswerLog.all["thing"]).to include("failed_count" => 1)
     end
 
     it "refuses a bare nil write outright" do
@@ -191,7 +191,7 @@ RSpec.describe Cache::Answers do
       described_class.resolve("thing", ttl: 1.hour, fingerprint: "fp1") { { a: 1 } }
       described_class.resolve("thing", ttl: 1.hour, fingerprint: "fp1", refresh: true) { { a: 2 } }
 
-      entry = Cache::AnswerLog.all["thing"]
+      entry = Estate::Cache::AnswerLog.all["thing"]
       expect(entry).to include("generated_count" => 1, "kept_count" => 1)
     end
   end
@@ -212,10 +212,10 @@ RSpec.describe Cache::Answers do
   # void is the failure mode this replaces.
   describe "configuration" do
     it "says so rather than inventing a store when there is neither one set nor a Rails" do
-      Cache.reset!
+      Estate::Cache.reset!
 
       expect { described_class.read("thing") }
-        .to raise_error(Cache::NotConfigured, /Cache.store is unset/)
+        .to raise_error(Estate::Cache::NotConfigured, /Estate::Cache.store is unset/)
     end
   end
 end
