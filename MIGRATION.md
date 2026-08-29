@@ -116,11 +116,76 @@ Football has no specs for either module today, so there are none to delete —
 the gem's carried-over ones are the first coverage this code has had in that
 repo.
 
+## LlmService (Estate::Llm::Service)
+
+The gateway HTTP client — `app/services/llm_service.rb` — was byte-identical
+between the two apps except for which `CLIENT_ID` each sent and how many of
+the rationale comments survived the copy. It is `Estate::Llm::Service` now,
+same methods (`json_completion`, `chat`, `ingest_chunks`, `search_knowledge`,
+`fetch_knowledge`), same timeout and retry rules.
+
+| Was | Is |
+| --- | --- |
+| `LlmService` | `Estate::Llm::Service` |
+| `LlmService::Error` | `Estate::Llm::Service::Error` |
+| `LlmService::TimedOut` | `Estate::Llm::Service::TimedOut` |
+| `CLIENT_ID = "baseball".freeze` (a Ruby constant) | `ENV["LLM_CLIENT_ID"]` — the one thing that varied per app, and every other varying value (`LLM_GATEWAY_URL`, `LLM_MODEL`, `LLM_API_KEY`, `LLM_COMPLETION_TIMEOUT`) was already read from ENV, not hardcoded |
+| `Estate::Monitor.external { ... }` called directly in the timing middleware | `Estate::Llm.instrumentation.call { ... }` — soft injection, same shape as `Estate::Cache.refresh_job`, so this gem still does not depend on `estate-monitor` |
+
+**Gemfile**: no new line — it is the same `estate-utils` dependency.
+**`estate-utils.gemspec`** now depends on `faraday` too.
+
+**`config/initializers/llm.rb`** (new — not `cache.rb`; separate module,
+separate file):
+
+```ruby
+Rails.application.config.to_prepare do
+  Estate::Llm.instrumentation = ->(&blk) { Estate::Monitor.external(&blk) }
+end
+```
+
+**`config/deploy.yml`**: add `LLM_CLIENT_ID: baseball` / `LLM_CLIENT_ID:
+football` to `env.clear`, next to the existing `LLM_GATEWAY_URL`. Not a
+secret — it is a plain identifier, same as the app name.
+
+**Delete**: `app/services/llm_service.rb` in both apps.
+
+**Rename** `LlmService` → `Estate::Llm::Service` — 35 files in baseball, 10 in
+football, plus two explicit `rescue LlmService::TimedOut` sites
+(`award_service.rb`, `playoff_award_service.rb`, baseball only). A plain
+string substitution correctly turns `LlmService::TimedOut` and
+`LlmService::Error` into their namespaced equivalents too — no separate pass.
+
+**Specs**: baseball's `llm_service_spec.rb` (266 lines) is the only one of
+the two with the timeout-budget and retry-exemption coverage; football's (118
+lines) never had it. The pure-behavior half of baseball's spec — everything
+except the two tests that scan the *app's own* `app/**/*.rb` for offenders —
+moved into this gem's `spec/llm_service_spec.rb` wholesale. The two
+app-introspecting tests **cannot** move: a gem cannot see a consuming app's
+file tree. They stay in each app's spec, pointed at the new constant name:
+
+- `"the budget lives in exactly one place"` — no service may pass `timeout:`
+  to `json_completion`.
+- `"no service retries a completion that timed out"` — every service with a
+  bare `retry` around a completion must `rescue Estate::Llm::Service::TimedOut`
+  first.
+
+Football never had these two guard specs. Porting them over is recommended
+(cheap, same protective value baseball already has) but not required by the
+extraction itself — football currently has no service that retries a
+completion at all, so the second one would start out vacuously true (and
+should assert that explicitly rather than silently pass on an empty list, if
+added).
+
 ## family-hub
 
-**family-hub has none of this.** It has no `Warehouse::Cached`, no
-`AnswerLog`, no `ServesCachedAnswers` — its slices cache by hand (see
-`Reader::Definer` / `reader_lookups`). So it is not a migration; it is a
+**family-hub has none of the caching half of this.** It has no
+`Warehouse::Cached`, no `AnswerLog`, no `ServesCachedAnswers` — its slices
+cache by hand (see `Reader::Definer` / `reader_lookups`). It does have its
+own `LlmService` (per its own CLAUDE.md), but it is a third,
+independently-written file, not a copy of either app's — it was never one of
+the two byte-identical copies this gem was built from, so it is out of scope
+for this extraction too. So none of this is a migration for family-hub; it is a
 possible future adoption, and the gem is where it would come from rather than a
 third copy of the file. The brief called this a three-app change; on the
 evidence it is a two-app change with a third app as the reason for extracting
