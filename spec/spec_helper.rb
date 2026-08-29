@@ -5,6 +5,7 @@ require "active_support/cache"
 require "active_support/core_ext/numeric/time"
 
 require "estate/cache"
+require "estate/llm"
 
 RSpec.configure do |config|
   config.expect_with(:rspec) { |c| c.syntax = :expect }
@@ -18,5 +19,6 @@ RSpec.configure do |config|
     Estate::Cache.reset!
     Estate::Cache::Warehouse.reset!
     Estate::Cache.store = ActiveSupport::Cache::MemoryStore.new
+    Estate::Llm.reset!
   end
 end
