@@ -6,6 +6,7 @@ require "active_support/core_ext/numeric/time"
 
 require "estate/cache"
 require "estate/llm"
+require "estate/article"
 
 RSpec.configure do |config|
   config.expect_with(:rspec) { |c| c.syntax = :expect }
