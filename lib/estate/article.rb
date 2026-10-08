@@ -39,7 +39,9 @@ module Estate
     ENOUGH_CHARS = 600
     ENOUGH_BLOCKS = 3
 
-    NOISE = /comment|share|social|newsletter|related|promo|subscribe|advert|sponsor|footer|sidebar|breadcrumb|nav|menu|cookie|consent|paywall|signup|sign-up|recirc|trending|most-popular|outbrain|taboola/i
+    # ESPN puts the writer's photo, name, date and bio in a list item atop the
+    # story ("Xuan ThaiOct 7, 2026, 07:42 PM ETClose…"); the byline is in meta.
+    NOISE = /author|byline|contributor|dateline|timestamp|comment|share|social|newsletter|related|promo|subscribe|advert|sponsor|footer|sidebar|breadcrumb|nav|menu|cookie|consent|paywall|signup|sign-up|recirc|trending|most-popular|outbrain|taboola/i
     BOILERPLATE = /\A(advertisement|ad|sponsored|subscribe|sign up|read more|related|share this|follow us|click here|listen to this article)\b/i
     # Filler a page leaves inside the story's own box.
     FILLER = /native ad|get our latest .* in your inbox|sign up for .* newsletter/i
@@ -59,7 +61,7 @@ module Estate
 
     # { title:, site:, byline:, image_url:, published_at:, blocks: [{kind:, text:}], readable: }
     def read(url)
-      key = "estate/article:v1:#{Digest::SHA256.hexdigest(url)}"
+      key = "estate/article:v2:#{Digest::SHA256.hexdigest(url)}"
       cached = store&.read(key)
       return cached if cached
 

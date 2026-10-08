@@ -52,4 +52,14 @@ RSpec.describe Estate::Article do
     described_class.read("https://www.espn.com/x")
     expect(described_class).to have_received(:fetch).once
   end
+
+  it "leaves the author box a page puts atop the story" do
+    html = <<~HTML
+      <html><body><article><ul><li class="single-author"><div class="author has-bio">Xuan ThaiOct 7, 2026, 07:42 PM ETClose Xuan Thai is a senior writer.</div></li></ul>
+      #{paras.map { |t| "<p>#{t}</p>" }.join}</article></body></html>
+    HTML
+    story = described_class.extract(html)
+    expect(story[:blocks].first[:kind]).to eq("p")
+    expect(story[:blocks].map { |b| b[:text] }.join).not_to include("Xuan Thai")
+  end
 end
